@@ -1,31 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import CategoryCard from "@/components/CategoryCard";
-import SearchBar from "@/components/SearchBar";
-import CartButton from "@/components/CartButton";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export default function Home() {
-  const [categories, setCategories] = useState([]);
+export default function HomePage() {
+  const router = useRouter();
 
   useEffect(() => {
-    api.get("/categories").then(res => {
-      setCategories(res.data);
-    });
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+
+      if (payload.role === "ADMIN") {
+        router.replace("/admin");
+      } else {
+        router.replace("/agent");
+      }
+    } catch (error) {
+      router.replace("/login");
+    }
   }, []);
 
-  return (
-    <div className="p-4 bg-gray-50 min-h-screen">
-      <SearchBar />
-
-      <div className="mt-4 space-y-3">
-        {categories.map((cat: any) => (
-          <CategoryCard key={cat.id} category={cat} />
-        ))}
-      </div>
-
-      <CartButton />
-    </div>
-  );
+  return null;
 }
