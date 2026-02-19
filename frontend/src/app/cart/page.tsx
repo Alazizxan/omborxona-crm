@@ -6,7 +6,7 @@ import { api } from "../../lib/api";
 import { useRouter } from "next/navigation";
 
 export default function CartPage() {
-  const { items, total, clear } = useCart();
+  const { items, totalUZS, totalUSD, clear } = useCart();
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
@@ -55,60 +55,78 @@ export default function CartPage() {
     setLoading(false);
   };
 
-  return (
-    <div className="p-4 bg-gray-50 min-h-screen">
-      <h1 className="text-lg font-semibold mb-4">Savatcha</h1>
+  const uzs = totalUZS();
+  const usd = totalUSD();
 
+  return (
+    <div className="p-4 bg-slate-950 min-h-screen text-slate-100">
+      <h1 className="text-xl font-semibold mb-6">Savatcha</h1>
+
+      {/* ITEMS */}
       <div className="space-y-3">
         {items.map(item => (
           <div
             key={item.productId}
-            className="bg-white p-3 rounded-xl border border-gray-200"
+            className="bg-slate-900 p-4 rounded-2xl border border-slate-800"
           >
             <div className="flex justify-between">
-              <span>{item.name}</span>
-              <span>
-                {item.quantity} x {item.price}
+              <span className="font-medium">{item.name}</span>
+              <span className="text-sm text-slate-400">
+                {item.quantity} × {item.price} {item.currency}
               </span>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-6 bg-white p-4 rounded-xl border border-gray-200 space-y-3">
+      {/* FORM + TOTAL */}
+      <div className="mt-8 bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4">
+
         <input
           placeholder="Mijoz ismi"
-          className="w-full p-2 border rounded-lg"
+          className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl"
           onChange={e => setForm({ ...form, clientName: e.target.value })}
         />
 
         <input
           placeholder="Telefon"
-          className="w-full p-2 border rounded-lg"
+          className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl"
           onChange={e => setForm({ ...form, clientPhone: e.target.value })}
         />
 
         <input
           placeholder="Do'kon nomi"
-          className="w-full p-2 border rounded-lg"
+          className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl"
           onChange={e => setForm({ ...form, storeName: e.target.value })}
         />
 
         <input
           placeholder="Manzil"
-          className="w-full p-2 border rounded-lg"
+          className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl"
           onChange={e => setForm({ ...form, address: e.target.value })}
         />
 
-        <div className="flex justify-between font-semibold">
-          <span>Jami:</span>
-          <span>{total()} so'm</span>
+        {/* TOTAL */}
+        <div className="pt-4 border-t border-slate-800 space-y-1 text-sm">
+          {uzs > 0 && (
+            <div className="flex justify-between">
+              <span>Jami (UZS)</span>
+              <span className="font-semibold">{uzs} so'm</span>
+            </div>
+          )}
+
+          {usd > 0 && (
+            <div className="flex justify-between">
+              <span>Jami (USD)</span>
+              <span className="font-semibold">${usd}</span>
+            </div>
+          )}
         </div>
 
         <button
           onClick={handleOrder}
           disabled={loading}
-          className="w-full bg-black text-white py-3 rounded-xl"
+          className="w-full bg-white text-black py-3 rounded-xl font-medium hover:opacity-90 transition"
         >
           {loading ? "Yaratilmoqda..." : "Buyurtma yaratish"}
         </button>

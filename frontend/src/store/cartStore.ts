@@ -15,9 +15,10 @@ interface CartState {
   remove: (productId: string) => void;
   increase: (productId: string) => void;
   decrease: (productId: string) => void;
-
+  updateQty: (productId: string, quantity: number) => void;
   totalUZS: () => number;
   totalUSD: () => number;
+  clear: () => void;
 }
 
 export const useCart = create<CartState>((set, get) => ({
@@ -47,6 +48,18 @@ export const useCart = create<CartState>((set, get) => ({
       items: state.items.filter(
         (i) => i.productId !== productId
       ),
+    })),
+
+
+  updateQty: (productId, quantity) =>
+    set((state) => ({
+      items: state.items
+        .map((i) =>
+          i.productId === productId
+            ? { ...i, quantity }
+            : i
+        )
+        .filter((i) => i.quantity > 0),
     })),
 
   increase: (productId) =>
@@ -84,4 +97,7 @@ export const useCart = create<CartState>((set, get) => ({
         (sum, i) => sum + i.price * i.quantity,
         0
       ),
+
+
+  clear: () => set({ items: [] }),
 }));
