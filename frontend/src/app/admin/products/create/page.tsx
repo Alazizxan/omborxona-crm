@@ -60,14 +60,14 @@ export default function CreateProductPage() {
         <FormInput
           label="Nomi"
           value={form.name}
-          onChange={(v) => setForm({ ...form, name: v })}
+          onChange={(v: string) => setForm({ ...form, name: v })}
         />
 
         {/* DESCRIPTION */}
         <FormInput
           label="Tavsif"
           value={form.description}
-          onChange={(v) => setForm({ ...form, description: v })}
+          onChange={(v: string) => setForm({ ...form, description: v })}
         />
 
         {/* PRICE + CURRENCY */}
@@ -76,13 +76,13 @@ export default function CreateProductPage() {
             label="Narxi"
             type="number"
             value={form.price}
-            onChange={(v) => setForm({ ...form, price: v })}
+            onChange={(v: string) => setForm({ ...form, price: v })}
           />
 
           <FormSelect
             label="Valyuta"
             value={form.currency}
-            onChange={(v) => setForm({ ...form, currency: v })}
+            onChange={(v: string) => setForm({ ...form, currency: v })}
             options={[
               { value: "UZS", label: "So'm (UZS)" },
               { value: "USD", label: "Dollar (USD)" },
@@ -95,7 +95,7 @@ export default function CreateProductPage() {
           <FormSelect
             label="Birlik"
             value={form.unit}
-            onChange={(v) => setForm({ ...form, unit: v })}
+            onChange={(v: string) => setForm({ ...form, unit: v })}
             options={[
               { value: "", label: "Tanlang" },
               { value: "DONA", label: "Dona" },
@@ -111,7 +111,7 @@ export default function CreateProductPage() {
             label="Boshlang‘ich soni"
             type="number"
             value={form.quantity}
-            onChange={(v) => setForm({ ...form, quantity: v })}
+            onChange={(v: string) => setForm({ ...form, quantity: v })}
           />
         </div>
 
@@ -119,7 +119,7 @@ export default function CreateProductPage() {
         <FormSelect
           label="Kategoriya"
           value={form.categoryId}
-          onChange={(v) => setForm({ ...form, categoryId: v })}
+          onChange={(v: string) => setForm({ ...form, categoryId: v })}
           options={[
             { value: "", label: "Tanlang" },
             ...categories.map(c => ({
