@@ -22,28 +22,21 @@ export default function OrderDetailModal({
     window.location.reload();
   };
 
-  const download = async () => {
+  const download = () => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const res = await api.get(
-      `/export/order/${order.id}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: "blob",
-      }
-    );
+    const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 
-    const blob = new Blob([res.data]);
-    const link = document.createElement("a");
-    link.href = window.URL.createObjectURL(blob);
-    link.download = `order-${order.orderNumber}.xlsx`;
-    link.click();
+    window.open(
+      `${base}/export/order/${order.id}?token=${token}`,
+      "_blank"
+    );
   };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center z-50">
-      
+
       <div className="w-full md:max-w-xl bg-slate-900 border border-slate-800 rounded-t-2xl md:rounded-2xl p-6 space-y-6 max-h-[90vh] overflow-y-auto">
 
         {/* HEADER */}

@@ -5,29 +5,39 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as ExcelJS from 'exceljs';
-import { BorderStyle } from 'exceljs';
 
 @Injectable()
 export class ExportService {
   constructor(private prisma: PrismaService) { }
 
-  // ================= ADMIN – HAMMA ORDER =================
+  /* ================= ADMIN ================= */
+
   async exportAllOrders() {
-    const orders = await this.getOrdersWithRelations();
-
-    return this.buildOrdersTable(orders, 'All Orders');
+    const orders = await this.getOrders();
+    return this.buildOrdersTable(orders, 'ALL ORDERS');
   }
 
-  // ================= AGENT – O‘Z ORDERLARI =================
   async exportAgentOrders(agentId: string) {
-    const orders = await this.getOrdersWithRelations({
-      agentId,
-    });
-
-    return this.buildOrdersTable(orders, 'Agent Orders');
+    const orders = await this.getOrders({ agentId });
+    return this.buildOrdersTable(orders, 'AGENT ORDERS');
   }
 
-  // ================= BITTA ORDER =================
+  /* ================= HELPER ================= */
+
+  private async getOrders(where: any = {}) {
+    return this.prisma.order.findMany({
+      where,
+      include: {
+        agent: true,
+        items: {
+          include: { product: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+
   async exportOrder(orderId: string, user: any) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
@@ -43,195 +53,65 @@ export class ExportService {
       throw new ForbiddenException();
     }
 
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Order');
-
-    /* ================= HEADER ================= */
-
-    sheet.mergeCells('A1:E1');
-    sheet.getCell('A1').value = `BUYURTMA: ${order.orderNumber}`;
-    sheet.getCell('A1').font = { size: 16, bold: true };
-    sheet.getCell('A1').alignment = { horizontal: 'center' };
-
-    sheet.addRow([]);
-
-    sheet.addRow(['Agent', order.agent?.name]);
-    sheet.addRow(['Mijoz', order.clientName]);
-    sheet.addRow(['Telefon', order.clientPhone]);
-    sheet.addRow(['Do‘kon', order.storeName]);
-    sheet.addRow(['Manzil', order.address]);
-    sheet.addRow(['Holat', order.status]);
-    sheet.addRow(['Sana', order.createdAt]);
-
-    sheet.addRow([]);
-    sheet.addRow([]);
-
-    /* ================= TABLE HEADER ================= */
-
-    const headerRow = sheet.addRow([
-      'Mahsulot',
-      'Miqdor',
-      'Narx',
-      'Valyuta',
-      'Jami',
-    ]);
-
-    headerRow.font = { bold: true };
-    headerRow.alignment = { horizontal: 'center' };
-
-    headerRow.eachCell(cell => {
-      cell.border = this.borderStyle();
-    });
-
-    /* ================= ITEMS ================= */
-
-    order.items.forEach(item => {
-      const total =
-        Number(item.price) * Number(item.quantity);
-
-      const row = sheet.addRow([
-        item.product?.name,
-        item.quantity,
-        item.price,
-        item.product?.currency,
-        total,
-      ]);
-
-      row.eachCell(cell => {
-        cell.border = this.borderStyle();
-      });
-    });
-
-    sheet.addRow([]);
-
-    /* ================= TOTAL ================= */
-
-    const uzsRow = sheet.addRow([
-      '',
-      '',
-      '',
-      'Umumiy UZS',
-      order.totalUZS || 0,
-    ]);
-
-    const usdRow = sheet.addRow([
-      '',
-      '',
-      '',
-      'Umumiy USD',
-      order.totalUSD || 0,
-    ]);
-
-    uzsRow.font = { bold: true };
-    usdRow.font = { bold: true };
-
-    uzsRow.eachCell(cell => {
-      cell.border = this.borderStyle();
-    });
-
-    usdRow.eachCell(cell => {
-      cell.border = this.borderStyle();
-    });
-
-    /* ================= COLUMN WIDTH ================= */
-
-    sheet.columns = [
-      { width: 25 },
-      { width: 12 },
-      { width: 15 },
-      { width: 12 },
-      { width: 18 },
-    ];
-
-    return workbook;
+    // buildOrdersTable mavjud logikani ishlatamiz
+    return this.buildOrdersTable([order], `ORDER-${order.orderNumber}`);
   }
 
-
-  private borderStyle(): Partial<ExcelJS.Borders> {
-    return {
-      top: { style: 'thin' },
-      left: { style: 'thin' },
-      bottom: { style: 'thin' },
-      right: { style: 'thin' },
-    } as Partial<ExcelJS.Borders>;
-  }
-
-
-
-
-
-  // ================= HELPER =================
-
-  private async getOrdersWithRelations(where: any = {}) {
-    return this.prisma.order.findMany({
-      where,
-      include: {
-        agent: true,
-        items: {
-          include: { product: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+  /* ================= MAIN BUILDER ================= */
 
   private buildOrdersTable(orders: any[], title: string) {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(title);
 
-    // ======== COMPANY HEADER ========
-    sheet.mergeCells('A1:K1');
-    const companyHeader = sheet.getCell('A1');
-    companyHeader.value = 'SALES REPORT';
-    companyHeader.font = { size: 16, bold: true };
-    companyHeader.alignment = { horizontal: 'center' };
+    /* ========= HEADER ========= */
+
+    sheet.mergeCells('A1:E1');
+    const header = sheet.getCell('A1');
+    header.value = 'SALES REPORT';
+    header.font = { size: 18, bold: true };
+    header.alignment = { horizontal: 'center' };
 
     sheet.addRow([]);
-
-    let currentRow = 3;
 
     let grandUZS = 0;
     let grandUSD = 0;
 
+    const monthlyMap: Record<
+      string,
+      { uzs: number; usd: number }
+    > = {};
+
     for (const order of orders) {
+      /* ========= ORDER INFO ========= */
 
-      // ===== ORDER INFO BLOCK =====
-      sheet.getCell(`A${currentRow}`).value =
-        `Order: ${order.orderNumber}`;
-      sheet.getCell(`A${currentRow}`).font = {
-        bold: true,
-      };
-      currentRow++;
-
+      const infoRow = sheet.addRow([
+        `Order: ${order.orderNumber}`,
+      ]);
+      infoRow.font = { bold: true };
       sheet.addRow([
         'Agent',
         order.agent?.name,
-        'Mijoz',
-        order.clientName,
-      ]);
-      currentRow++;
-
-      sheet.addRow([
-        'Telefon',
-        order.clientPhone,
         'Holat',
         order.status,
       ]);
-      currentRow++;
+
+      sheet.addRow([
+        'Mijoz',
+        order.clientName,
+        'Telefon',
+        order.clientPhone,
+      ]);
 
       sheet.addRow([
         'Sana',
         order.createdAt,
       ]);
-      sheet.getCell(`B${currentRow}`).numFmt =
-        'dd.mm.yyyy hh:mm';
-      currentRow++;
 
       sheet.addRow([]);
-      currentRow++;
 
-      // ===== TABLE HEADER =====
-      const header = sheet.addRow([
+      /* ========= TABLE HEADER ========= */
+
+      const tableHeader = sheet.addRow([
         'Mahsulot',
         'Miqdor',
         'Narx',
@@ -239,20 +119,21 @@ export class ExportService {
         'Jami',
       ]);
 
-      header.font = { bold: true };
-      header.alignment = { horizontal: 'center' };
-      header.eachCell(cell => {
+      tableHeader.font = { bold: true };
+      tableHeader.eachCell((cell) => {
         cell.fill = {
           type: 'pattern',
           pattern: 'solid',
-          fgColor: { argb: 'FFECECEC' },
+          fgColor: { argb: 'FFEFEFEF' },
         };
-        cell.border = this.borderStyle();
+        cell.border = this.border();
       });
 
-      currentRow++;
+      /* ========= ITEMS ========= */
 
-      // ===== ITEMS =====
+      let orderUZS = 0;
+      let orderUSD = 0;
+
       for (const item of order.items) {
         const total =
           Number(item.price) *
@@ -261,112 +142,135 @@ export class ExportService {
         const row = sheet.addRow([
           item.product?.name,
           item.quantity,
-          Number(item.price),
+          item.price,
           item.product?.currency,
           total,
         ]);
 
-        row.eachCell(cell => {
-          cell.border = this.borderStyle();
+        row.eachCell((cell) => {
+          cell.border = this.border();
         });
 
         if (item.product?.currency === 'UZS') {
-          row.getCell(3).numFmt =
-            '#,##0 "so\'m"';
-          row.getCell(5).numFmt =
-            '#,##0 "so\'m"';
+          orderUZS += total;
         }
-
         if (item.product?.currency === 'USD') {
-          row.getCell(3).numFmt =
-            '$#,##0.00';
-          row.getCell(5).numFmt =
-            '$#,##0.00';
+          orderUSD += total;
         }
-
-        currentRow++;
       }
 
-      // ===== ORDER TOTAL =====
+      /* ========= ORDER TOTAL ========= */
+
       sheet.addRow([]);
 
-      const uzsRow = sheet.addRow([
+      const totalRow1 = sheet.addRow([
         '',
         '',
         '',
-        'ORDER JAMI UZS',
-        order.totalUZS || 0,
+        'ORDER UZS',
+        orderUZS,
       ]);
 
-      uzsRow.font = { bold: true };
-      uzsRow.getCell(5).numFmt =
-        '#,##0 "so\'m"';
-      uzsRow.eachCell(cell => {
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFF9F9F9' },
-        };
-      });
-
-      const usdRow = sheet.addRow([
+      const totalRow2 = sheet.addRow([
         '',
         '',
         '',
-        'ORDER JAMI USD',
-        order.totalUSD || 0,
+        'ORDER USD',
+        orderUSD,
       ]);
 
-      usdRow.font = { bold: true };
-      usdRow.getCell(5).numFmt =
-        '$#,##0.00';
-      usdRow.eachCell(cell => {
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFF9F9F9' },
-        };
-      });
+      totalRow1.font = { bold: true };
+      totalRow2.font = { bold: true };
 
-      grandUZS += Number(order.totalUZS || 0);
-      grandUSD += Number(order.totalUSD || 0);
+      /* ========= GRAND TOTAL LOGIC ========= */
+
+      if (order.status === 'COMPLETED') {
+        grandUZS += orderUZS;
+        grandUSD += orderUSD;
+
+        const monthKey = new Date(
+          order.createdAt,
+        )
+          .toISOString()
+          .slice(0, 7);
+
+        if (!monthlyMap[monthKey]) {
+          monthlyMap[monthKey] = {
+            uzs: 0,
+            usd: 0,
+          };
+        }
+
+        monthlyMap[monthKey].uzs += orderUZS;
+        monthlyMap[monthKey].usd += orderUSD;
+      }
 
       sheet.addRow([]);
       sheet.addRow([]);
-      currentRow += 4;
     }
 
-    // ===== GRAND TOTAL =====
-    sheet.addRow(['', '', '', 'UMUMIY UZS', grandUZS]);
-    const g1 = sheet.lastRow;
-    g1.font = { bold: true };
-    g1.getCell(5).numFmt = '#,##0 "so\'m"';
-    g1.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFD9EAD3' },
+    /* ========= GRAND TOTAL ========= */
+
+    sheet.addRow([]);
+    sheet.addRow([
+      '',
+      '',
+      '',
+      'UMUMIY UZS (FAqat COMPLETED)',
+      grandUZS,
+    ]).font = { bold: true };
+
+    sheet.addRow([
+      '',
+      '',
+      '',
+      'UMUMIY USD (FAqat COMPLETED)',
+      grandUSD,
+    ]).font = { bold: true };
+
+    /* ========= MONTHLY REPORT ========= */
+
+    sheet.addRow([]);
+    sheet.addRow([]);
+    sheet.addRow(['OYLIK HISOBOT']).font = {
+      bold: true,
+      size: 14,
     };
 
-    sheet.addRow(['', '', '', 'UMUMIY USD', grandUSD]);
-    const g2 = sheet.lastRow;
-    g2.font = { bold: true };
-    g2.getCell(5).numFmt = '$#,##0.00';
-    g2.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFD9EAD3' },
-    };
+    const monthHeader = sheet.addRow([
+      'Oy',
+      'UZS',
+      'USD',
+    ]);
+    monthHeader.font = { bold: true };
+
+    Object.keys(monthlyMap).forEach(
+      (month) => {
+        sheet.addRow([
+          month,
+          monthlyMap[month].uzs,
+          monthlyMap[month].usd,
+        ]);
+      },
+    );
 
     sheet.columns = [
       { width: 25 },
-      { width: 10 },
+      { width: 12 },
       { width: 15 },
-      { width: 18 },
+      { width: 12 },
       { width: 18 },
     ];
 
     return workbook;
   }
 
-
+  private border(): Partial<ExcelJS.Borders> {
+    return {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+  }
 }

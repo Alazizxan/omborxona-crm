@@ -34,6 +34,11 @@ export class ProductsController {
     return this.service.findAll(search);
   }
 
+  @Get('search')
+  findSearch(@Query('search') search?: string) {
+    return this.service.findAll(search);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
@@ -45,6 +50,9 @@ export class ProductsController {
   findByCategory(@Param('categoryId') categoryId: string) {
     return this.service.findByCategory(categoryId);
   }
+
+  // 🔹 MINI APP SEARCH (AGENT)
+
 
 
 

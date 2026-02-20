@@ -39,20 +39,38 @@ model Product {
   category    Category    @relation(fields: [categoryId], references: [id])
 }
 
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String
+  storeName String?
+  address   String?
+  createdAt DateTime @default(now())
+
+  orders    Order[]
+}
+
 model Order {
   id          String      @id @default(uuid())
+  orderNumber String      @unique
+
   clientName  String
   clientPhone String
   storeName   String
   address     String
+
+  clientId    String?
+  client      Client?    @relation(fields: [clientId], references: [id])
+
   lat         Float?
   lng         Float?
   status      OrderStatus @default(CREATED)
   agentId     String
   createdAt   DateTime    @default(now())
-  orderNumber String      @unique
   totalUSD    Decimal     @default(0)
   totalUZS    Decimal     @default(0)
+
   agent       User        @relation(fields: [agentId], references: [id])
   items       OrderItem[]
 }

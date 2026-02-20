@@ -21,6 +21,31 @@ export class OrdersService {
       let totalUZS = 0;
       let totalUSD = 0;
 
+      // 🔹 CLIENT DATA (default — dto dan)
+      let clientName = dto.clientName;
+      let clientPhone = dto.clientPhone;
+      let storeName = dto.storeName;
+      let address = dto.address;
+      let clientId: string | null = null;
+
+      // 🔥 Agar clientId yuborilgan bo‘lsa — DB dan olamiz
+      if (dto.clientId) {
+        const client = await tx.client.findUnique({
+          where: { id: dto.clientId },
+        });
+
+        if (!client) {
+          throw new Error('Client not found');
+        }
+
+        clientId = client.id;
+        clientName = client.name;
+        clientPhone = client.phone;
+        storeName = client.storeName ?? '';
+        address = client.address ?? '';
+      }
+
+      // 🔹 PRODUCT CHECK + TOTAL HISOBLASH
       for (const item of dto.items) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
@@ -51,26 +76,35 @@ export class OrdersService {
         });
       }
 
+      // 🔹 ORDER CREATE
       return tx.order.create({
         data: {
           orderNumber,
-          clientName: dto.clientName,
-          clientPhone: dto.clientPhone,
-          storeName: dto.storeName,
-          address: dto.address,
+
+          clientName,
+          clientPhone,
+          storeName,
+          address,
+          clientId, // 🔥 Yangi relation
+
           lat: dto.lat ?? null,
           lng: dto.lng ?? null,
+
           totalUZS,
           totalUSD,
           agentId,
+
           items: {
             create: dto.items.map(item => ({
               productId: item.productId,
               quantity: Number(item.quantity),
-              price: Number(item.price),   // 🔥 MUHIM
+              price: Number(item.price),
             })),
-          }
-
+          },
+        },
+        include: {
+          client: true,
+          items: true,
         },
       });
     });
@@ -79,7 +113,10 @@ export class OrdersService {
 
   async agentStats(agentId: string) {
     const orders = await this.prisma.order.aggregate({
-      where: { agentId },
+      where: {
+        agentId,
+        status: 'COMPLETED', // 
+      },
       _count: true,
       _sum: {
         totalUZS: true,

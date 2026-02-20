@@ -15,6 +15,9 @@ class OrderItemDto {
 export class CreateOrderDto {
   @IsString()
   clientName: string;
+  
+  @IsString()
+  clientId: string; 
 
   @IsString()
   clientPhone: string;

@@ -93,6 +93,10 @@ export default function AgentLayout({
             Kategoriyalar
           </Link>
 
+          <Link href="/agent/clients" className={linkStyle("/agent/clients")}>
+            Mijozlar
+          </Link>
+
           <Link href="/agent/cart" className={linkStyle("/agent/cart")}>
             Savatcha
           </Link>

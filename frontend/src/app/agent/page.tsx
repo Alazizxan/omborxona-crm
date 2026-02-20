@@ -8,27 +8,10 @@ export default function AgentDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    api
-      .get("/orders/my", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then(res => {
-        const orders = res.data;
-
-        let totalUZS = 0;
-        let totalUSD = 0;
-
-        orders.forEach((o: any) => {
-          totalUZS += Number(o.totalUZS);
-          totalUSD += Number(o.totalUSD);
-        });
-
-        setStats({
-          count: orders.length,
-          totalUZS,
-          totalUSD,
-        });
-      });
+    api.get("/orders/agent-stats", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => setStats(res.data));
   }, []);
 
   if (!stats) return <div>Loading...</div>;
@@ -40,7 +23,7 @@ export default function AgentDashboard() {
           Buyurtmalar soni
         </div>
         <div className="text-xl font-semibold">
-          {stats.count}
+          {stats.totalOrders} ta
         </div>
       </div>
 

@@ -12,33 +12,30 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/guards/roles.decorator';
 import { Response } from 'express';
 
-
-
 @Controller('export')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ExportController {
   constructor(private service: ExportService) {}
 
-  // ADMIN – hamma order
+  // ================= ADMIN – hamma order =================
   @Roles('ADMIN')
   @Get('orders')
   async exportAll(@Res() res: Response) {
     const workbook = await this.service.exportAllOrders();
-    await workbook.xlsx.write(res);
-    res.end();
+    await this.sendExcel(res, workbook, 'all-orders.xlsx');
   }
 
-  // AGENT – o‘z orderlari
+  // ================= AGENT – o‘z orderlari =================
   @Roles('AGENT')
   @Get('my')
   async exportMy(@Req() req: any, @Res() res: Response) {
     const workbook =
       await this.service.exportAgentOrders(req.user.id);
-    await workbook.xlsx.write(res);
-    res.end();
+
+    await this.sendExcel(res, workbook, 'my-orders.xlsx');
   }
 
-  // ADMIN – agent orderlari
+  // ================= ADMIN – agent orderlari =================
   @Roles('ADMIN')
   @Get('agent/:agentId')
   async exportAgent(
@@ -47,11 +44,11 @@ export class ExportController {
   ) {
     const workbook =
       await this.service.exportAgentOrders(agentId);
-    await workbook.xlsx.write(res);
-    res.end();
+
+    await this.sendExcel(res, workbook, `agent-${agentId}.xlsx`);
   }
 
-  // ADMIN + AGENT – bitta order
+  // ================= ADMIN + AGENT – bitta order =================
   @Roles('ADMIN', 'AGENT')
   @Get('order/:id')
   async exportSingle(
@@ -61,7 +58,31 @@ export class ExportController {
   ) {
     const workbook =
       await this.service.exportOrder(id, req.user);
-    await workbook.xlsx.write(res);
-    res.end();
+
+    await this.sendExcel(res, workbook, `order-${id}.xlsx`);
+  }
+
+  /* ================= HELPER ================= */
+
+  private async sendExcel(
+    res: Response,
+    workbook: any,
+    filename: string,
+  ) {
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=${filename}`,
+    );
+
+    res.setHeader('Content-Length', buffer.length);
+
+    res.send(buffer);
   }
 }

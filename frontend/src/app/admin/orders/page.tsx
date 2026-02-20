@@ -37,20 +37,16 @@ export default function OrdersPage() {
       .then(res => setAgents(res.data));
   };
 
-  const download = async (url: string, filename: string) => {
+  const download = (url: string) => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const res = await api.get(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: "blob",
-    });
+    const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 
-    const blob = new Blob([res.data]);
-    const link = document.createElement("a");
-    link.href = window.URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
+    window.open(
+      `${base}${url}?token=${token}`,
+      "_blank"
+    );
   };
 
   useEffect(() => {
@@ -61,7 +57,7 @@ export default function OrdersPage() {
     <div className="space-y-6">
 
       {/* TITLE */}
-      
+
 
       {/* FILTER PANEL */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4">
@@ -102,7 +98,7 @@ export default function OrdersPage() {
 
           <button
             onClick={() =>
-              download("/export/orders", "all-orders.xlsx")
+              download("/export/orders")
             }
             className="bg-slate-800 hover:bg-slate-700 rounded-lg px-4 py-2 text-sm transition"
           >
@@ -114,7 +110,7 @@ export default function OrdersPage() {
         {agentId && (
           <button
             onClick={() =>
-              download(`/export/agent/${agentId}`, "agent-orders.xlsx")
+              download(`/export/agent/${agentId}`)
             }
             className="bg-slate-800 hover:bg-slate-700 rounded-lg px-4 py-2 text-sm transition"
           >
@@ -160,9 +156,7 @@ export default function OrdersPage() {
                   <button
                     onClick={() =>
                       download(
-                        `/export/order/${order.id}`,
-                        `order-${order.orderNumber}.xlsx`
-                      )
+                        `/export/order/${order.id}`)
                     }
                     className="text-blue-400 text-xs hover:text-blue-300"
                   >
@@ -208,9 +202,7 @@ export default function OrdersPage() {
               onClick={(e) => {
                 e.stopPropagation();
                 download(
-                  `/export/order/${order.id}`,
-                  `order-${order.orderNumber}.xlsx`
-                );
+                  `/export/order/${order.id}`);
               }}
               className="text-blue-400 text-xs mt-2"
             >
